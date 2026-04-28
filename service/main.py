@@ -8,14 +8,25 @@ app = Flask(__name__)
 def score_transaction(txn):
     amount = float(txn.get("amount", 0))
 
-    score = 0.02
+    # Base probability (most transactions are safe)
+    score = 0.01
 
-    if amount > 800:
-        score += 0.45
-    elif amount > 300:
-        score += 0.20
+    if amount <= 50:
+        score += 0.01   # very common → very low risk
+    elif amount <= 100:
+        score += 0.03   # common
+    elif amount <= 200:
+        score += 0.08   # less common
+    elif amount <= 500:
+        score += 0.25   # rare → higher risk
+    elif amount <= 1000:
+        score += 0.50   # very rare → high risk
+    else:
+        score += 0.70   # extreme outlier → very high risk
 
-    score += random.uniform(0, 0.1)
+    # add small randomness for realism
+    import random
+    score += random.uniform(0, 0.05)
 
     return round(min(score, 0.99), 4)
 
@@ -37,10 +48,15 @@ def receive_pubsub():
 
     prediction = score_transaction(transaction)
 
-    print({
-        "transaction": transaction,
-        "fraud_probability": prediction
-    })
+    print(f"Processed transaction {transaction.get('transaction_id')} with fraud probability {prediction}")
+
+    # Add BigQuery inserts here
+
+
+
+
+
+
 
     return jsonify({
         "status": "processed",

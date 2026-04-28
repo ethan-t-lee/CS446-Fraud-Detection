@@ -2,8 +2,11 @@ import pandas as pd
 import json, time, glob
 from google.cloud import pubsub_v1
 
+PROJECT_ID = "cs446-fraud-detection"
+TOPIC_ID = "transaction-events"
+
 publisher = pubsub_v1.PublisherClient()
-topic_path = publisher.topic_path("cs446-fraud-detection", "transaction-events")    
+topic_path = publisher.topic_path(PROJECT_ID, TOPIC_ID)
 
 ##################################################
 # Uncomment which option you want               
@@ -11,7 +14,7 @@ topic_path = publisher.topic_path("cs446-fraud-detection", "transaction-events")
 ##################################################
 
 # --- OPTION 1: Single day ---
-df = pd.read_pickle("simulated-data-raw/2018-04-01.pkl")
+df = pd.read_pickle("simulated-data-raw/data/2018-04-01.pkl")
 df = df.head(100)
 
 # --- OPTION 2: Multiple specific days ---
@@ -36,4 +39,4 @@ for _, row in df.iterrows():
     }
     publisher.publish(topic_path, json.dumps(msg).encode("utf-8"))
     print(f"Published: {msg}")
-    time.sleep(0.01)     #Will delay each transaction posting, can change
+    time.sleep(0.05)     #Will delay each transaction posting, can change
