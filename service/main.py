@@ -1,9 +1,13 @@
 import base64
 import json
 import random
+import datetime
 from flask import Flask, request, jsonify
+from google.cloud import bigquery
 
 app = Flask(__name__)
+bq_client = bigquery.Client()
+BIGQUERY_TABLE = "cs446-fraud-detection.fraud_dataset.predictions"
 
 def score_transaction(txn):
     amount = float(txn.get("amount", 0))
@@ -50,13 +54,18 @@ def receive_pubsub():
 
     print(f"Processed transaction {transaction.get('transaction_id')} with fraud probability {prediction}")
 
-    # Add BigQuery inserts here
+    # Store prediction results in BigQuery
+    row = {
+        "transaction_id": transaction.get("TRANSACTION_ID"),
+        "tx_amount": transaction.get("TX_AMOUNT"),
+        "tx_fraud": transaction.get("TX_FRAUD"),
+        "fraud_probability": prediction,
+        "processed_at": datetime.datetime.now().isoformat()
+    }
 
-
-
-
-
-
+    errors = bq_client.insert_rows_json(BIGQUERY_TABLE, [row])
+    if errors:
+        print(f"BigQuery insert errors: {errors}")
 
     return jsonify({
         "status": "processed",
