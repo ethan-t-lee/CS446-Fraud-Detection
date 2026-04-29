@@ -10,7 +10,7 @@ bq_client = bigquery.Client()
 BIGQUERY_TABLE = "cs446-fraud-detection.fraud_dataset.predictions"
 
 def score_transaction(txn):
-    amount = float(txn.get("amount", 0))
+    amount = float(txn.get("TX_AMOUNT", 0))
 
     # Base probability (most transactions are safe)
     score = 0.01
@@ -52,7 +52,7 @@ def receive_pubsub():
 
     prediction = score_transaction(transaction)
 
-    print(f"Processed transaction {transaction.get('transaction_id')} with fraud probability {prediction}")
+    print(f"Processed transaction {transaction.get('TRANSACTION_ID')} with fraud probability {prediction}")
 
     # Store prediction results in BigQuery
     row = {
@@ -70,6 +70,8 @@ def receive_pubsub():
     return jsonify({
         "status": "processed",
         "transaction_id": transaction.get("transaction_id"),
+        "tx_amount": transaction.get("tx_amount"),
+        "tx_fraud": transaction.get("tx_fraud"),
         "fraud_probability": prediction
     }), 200
 
