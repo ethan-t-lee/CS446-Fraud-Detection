@@ -1,32 +1,26 @@
 import pandas as pd
-import json, time, glob
+import json, time, glob, argparse
 from google.cloud import pubsub_v1
 
 PROJECT_ID = "cs446-fraud-detection"
 TOPIC_ID = "transaction-events"
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--days", nargs="+", default=["2018-04-01"], help="Which day files to load (e.g. 2018-04-01 2018-04-02)")
+parser.add_argument("--all", action="store_true", help="Load all 183 days")
+parser.add_argument("--limit", type=int, default=100, help="Max transactions to send")
+parser.add_argument("--delay", type=float, default=0.05, help="Seconds between each transaction")
+args = parser.parse_args()
+
 publisher = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path(PROJECT_ID, TOPIC_ID)
 
-##################################################
-# Uncomment which option you want               
-# Each day has ~10000 transactions              
-##################################################
+if args.all:
+    df = pd.concat([pd.read_pickle(f) for f in sorted(glob.glob("simulated-data-raw/data/*.pkl"))])
+else:
+    df = pd.concat([pd.read_pickle(f"simulated-data-raw/data/{day}.pkl") for day in args.days])
 
-# --- OPTION 1: Single day ---
-df = pd.read_pickle("simulated-data-raw/data/2018-04-01.pkl")
-df = df.head(100)
-
-# --- OPTION 2: Multiple specific days ---
-# df = pd.concat([
-#     pd.read_pickle("simulated-data-raw/2018-04-01.pkl"),
-#     pd.read_pickle("simulated-data-raw/2018-04-02.pkl"),
-#     pd.read_pickle("simulated-data-raw/2018-04-03.pkl"),
-# ])
-
-# If you run this option, thats 1.75 million transactions, so it will take a long time
-# --- OPTION 3: All 183 days ---
-# df = pd.concat([pd.read_pickle(f) for f in sorted(glob.glob("simulated-data-raw/*.pkl"))])
+df = df.head(args.limit)
 
 for _, row in df.iterrows():
     msg = {
@@ -39,4 +33,4 @@ for _, row in df.iterrows():
     }
     publisher.publish(topic_path, json.dumps(msg).encode("utf-8"))
     print(f"Published: {msg}")
-    time.sleep(0.05)     #Will delay each transaction posting, can change
+    time.sleep(args.delay)
